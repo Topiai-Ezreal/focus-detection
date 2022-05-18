@@ -1,3 +1,8 @@
+"""
+统计每个病灶对应的标注框的宽高分布。
+高度分布在0~2100之间，宽度分布在0~1600之间，按照100的步长划分21个和16个区间，把宽高放在对应的区间内。
+"""
+
 import os
 from utils import create_dict
 import pandas as pd
@@ -41,6 +46,8 @@ def draw_distribution(save_path, size_np):
 
 def write_excel(save_path):
     excel_writer = pd.ExcelWriter(save_path)
+
+    # 写入宽度分布
     record_w = pd.DataFrame(columns=[(i+1)*100 for i in range(16)])
     index1 = 1
     for row in size_width:
@@ -48,6 +55,7 @@ def write_excel(save_path):
         index1 += 1
     record_w.to_excel(excel_writer, sheet_name='width')
 
+    # 写入高度分布
     record_h = pd.DataFrame(columns=[(i + 1) * 100 for i in range(21)])
     index2 = 1
     for row in size_height:
@@ -67,8 +75,6 @@ def state_box_size(txt_path):
             if k in file_dict.keys():
                 del file_dict[k]
 
-        # img = cv2.imdecode(np.fromfile(os.path.join(img_path, file_name[:-3] + 'jpg'), dtype=np.uint8), 1)
-
         for illness in file_dict.keys():
             for box in file_dict[illness]:
                 width = box[2] - box[0]
@@ -79,7 +85,10 @@ def state_box_size(txt_path):
                 size_height[illness - 1][height_index] += 1
 
 
+# 统计所有标注文件的标注框长宽分布
 state_box_size(txt_path='E:\\0726_ai_annotation\\all_data\\note')
+# 把分布信息存入表格中
 write_excel(save_path='E:\\0726_ai_annotation\\all_data\\size.xlsx')
+# 绘制分布直方图，save_path为直方图的保存路径
 draw_distribution(save_path='E:\\0726_ai_annotation\\all_data\\plot\\宽度分布', size_np=size_width)
 draw_distribution(save_path='E:\\0726_ai_annotation\\all_data\\plot\\高度分布', size_np=size_height)

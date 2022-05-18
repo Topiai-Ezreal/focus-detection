@@ -78,3 +78,34 @@ def create_dict(file):
             lesion_dict['grade'] = line[0]
 
     return lesion_dict
+
+
+def compute_iou(rec1, rec2, mode):
+    """
+    计算IoU
+    :param rec1: (x0, y0, x1, y1), 标注框坐标信息
+            分别代表左上角点横、纵坐标，右下角点横、纵坐标
+    :param rec2: (x0, y0, x1, y1)
+    :return: IoU
+    """
+    # 计算每个矩形框的面积
+    S_rec1 = (rec1[2] - rec1[0]) * (rec1[3] - rec1[1])
+    S_rec2 = (rec2[2] - rec2[0]) * (rec2[3] - rec2[1])
+
+    # 计算并集
+    sum_area = S_rec1 + S_rec2
+
+    # 找到准交集的边际
+    left_line = max(rec1[0], rec2[0])
+    right_line = min(rec1[2], rec2[2])
+    top_line = max(rec1[1], rec2[1])
+    bottom_line = min(rec1[3], rec2[3])
+
+    # 判断是否有交集，有则计算IoU
+    if left_line >= right_line or top_line >= bottom_line:
+        return 0
+    else:
+        intersect = (right_line - left_line) * (bottom_line - top_line)  # 交集
+        result = (intersect / (sum_area - intersect)) * 1.0
+
+        return result if mode == 'iou' else intersect

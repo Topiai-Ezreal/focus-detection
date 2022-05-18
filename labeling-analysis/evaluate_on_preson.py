@@ -1,7 +1,11 @@
+"""
+按标注人员计算标注一致度，有两种比较策略：
+1：两个标注者之间互相比较
+2：标注者与审核专家比较
+"""
+
 import os
-from tools import compute_iou, create_dict
-import pandas
-import numpy as np
+from utils import compute_iou, create_dict
 
 
 def compare_grade(dict1, dict2):
@@ -193,28 +197,49 @@ def evaluate_with_others(txt_path1, txt_path2):
     print('干预分级准确率：', grade_acc)
 
 
-def evaluate_with_standard(txt_path1, txt_path2, save_path):
+def evaluate_with_standard(txt_path1, txt_path2):
     img_num = 0  # 图片数
-    record = pandas.DataFrame(None, columns=['image','ill_f1', 'box_f1'])
-    eps = np.finfo(np.float32).eps
-    for name in os.listdir(txt_path1):
-        if name in os.listdir(txt_path2):
+    ill_precision, ill_recall = 0, 0  # 病灶类别
+    box_precision, box_recall = 0, 0
+    grade_right_num = 0  # 干预分级
+    namelist1 = os.listdir(txt_path1)
+    namelist2 = os.listdir(txt_path2)
+    for name in namelist1:
+        if name in namelist2:
             with open(os.path.join(txt_path1, name), 'r') as f1:
                 dict1 = create_dict(f1)
             with open(os.path.join(txt_path2, name), 'r') as f2:
                 dict2 = create_dict(f2)
-
-            ip, ir = compare_illness_standard(dict1, dict2)
-            bp, br = compare_box_standard(dict1, dict2)
-            ill_f1 = 2*ip*ir/(ip+ir+eps)
-            box_f1 = 2*bp*br/(bp+br+eps)
-            record.loc[img_num] = [name, ill_f1, box_f1]
             img_num += 1
-    record.to_excel(save_path)
+            ip, ir = compare_illness_standard(dict1, dict2)
+            ill_precision += ip
+            ill_recall += ir
+            bp, br = compare_box_standard(dict1, dict2)
+            box_precision += bp
+            box_recall += br
+            grade_right_num += compare_grade(dict1, dict2)
+    grade_acc = grade_right_num / img_num
+    ill_precision = ill_precision / img_num
+    ill_recall = ill_recall / img_num
+    box_precision = box_precision / img_num
+    box_recall = box_recall / img_num
+    ill_f1_score = 2 * ill_recall * ill_precision / (ill_recall + ill_precision)
+    box_f1_score = 2 * box_recall * box_precision / (box_recall + box_precision)
+
+    print('图片数：', img_num)
+    print('病灶类别精确度：', ill_precision, '  召回率：', ill_recall, '  F1 score：', ill_f1_score)
+    print('病灶定位精确度：', box_precision, '  召回率：', box_recall, '  F1 score：', box_f1_score)
+    print('干预分级准确率：', grade_acc)
 
 
-def evaluate_on_image(txt_path1, txt_path2, mode, save_path):
+def evaluate_on_person(txt_path1, txt_path2, mode):
     if mode == 0:
         evaluate_with_others(txt_path1, txt_path2)
     elif mode == 1:
-        evaluate_with_standard(txt_path1, txt_path2, save_path)
+        evaluate_with_standard(txt_path1, txt_path2)
+
+
+annotations1 = ''   # 标注文件储存路径
+annotations2 = ''
+mode = 0            # 0表示标注者之间比较；1标注标注者与审核专家比较
+evaluate_on_person(annotations1, annotations2, mode)
